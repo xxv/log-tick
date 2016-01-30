@@ -71,7 +71,7 @@ def load_events():
         interval=60 * 1000
         now=int(time.time() * 1000)
         if last_load:
-            delay = max(0, (last_load + interval) - now)
+            delay = max(0, (last_load + interval/2) - now)
             if delay:
                 print("Reloading too fast. Waiting...")
             time.sleep(delay / 1000)
