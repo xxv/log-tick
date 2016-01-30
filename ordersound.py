@@ -65,12 +65,18 @@ def load_events():
 
         interval=60 * 1000
         now=int(time.time() * 1000)
-        if not last_load:
+        if last_load:
+            delay = max(0, (last_load + interval) - now)
+            if delay:
+                print("Reloading too fast. Waiting...")
+            time.sleep(delay / 1000)
+            now=int(time.time() * 1000)
+        else:
             last_load = now - interval
         logs = load_logs(config['account_key'], config['log_set_name'], config['log_name'], last_load, now)
         for event in sorted(logs, key=lambda event: event[0]):
             events.put(event)
-        print("Done.")
+        print("Loaded {:d} events.".format(len(logs)))
         last_load = now
         load_lock.clear()
 
@@ -86,20 +92,22 @@ fs=44100
 
 event = None
 while True:
-    try:
-        # if the buffer is low, fill it up
-        if events.qsize() < 5 and not load_lock.is_set():
-            load_lock.set()
-        if not event:
-            event = events.get(timeout=60)
-        if (event[0] + offset) <= datetime.datetime.now():
-            sd.play([[-1.0],[-1.0],[-1.0], [0.0]], fs, blocking=False)
-            print(event)
-            event = events.get(timeout=60)
-            leds.advance(0xff00a0)
-            events.task_done()
-        else:
-            leds.tick()
-        time.sleep(0.001)
-    except queue.Empty:
-        pass
+    # if the buffer is low, fill it up
+    if events.qsize() < 5 and not load_lock.is_set():
+        load_lock.set()
+    if not event:
+        try:
+            event = events.get(block=False)
+        except queue.Empty:
+            event = None
+    if event and (event[0] + offset) <= datetime.datetime.now():
+        sd.play([[-1.0],[-1.0],[-1.0], [0.0]], fs, blocking=False)
+        print(event)
+        try:
+            event = events.get(block=False)
+        except queue.Empty:
+            event = None
+        leds.advance(0xff007a)
+    else:
+        leds.tick()
+    time.sleep(0.001)
