@@ -96,6 +96,12 @@ led_count=32
 fs=44100
 leds=LedPattern(APA102(led_count), led_count, 32)
 
+#RRBBGG
+#          RRBBGG
+ORANGE = 0xff007a
+BLUE   = 0x75b0ff
+GREEN  = 0x0000ff
+
 event = None
 while True:
     # if the buffer is low, fill it up
@@ -111,9 +117,14 @@ while True:
         print(event)
         try:
             event = events.get(block=False)
+            color=ORANGE
+            if 'v13' in event[1]:
+                color=GREEN
+            elif 'gift' in event[1]:
+                color=BLUE
+            leds.advance(color)
         except queue.Empty:
             event = None
-        leds.advance(0xff007a)
     else:
         leds.tick()
     time.sleep(0.001)
