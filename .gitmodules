@@ -1,0 +1,3 @@
+[submodule "apa102"]
+	path = apa102
+	url = https://github.com/tinue/APA102_Pi.git
