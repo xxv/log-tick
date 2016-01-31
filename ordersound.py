@@ -6,8 +6,8 @@ import json
 import iso8601
 import pytz
 import re
-import sounddevice as sd
-import soundfile as sf
+import rtmidi
+from rtmidi.midiconstants import *
 import time
 import threading
 import urllib.request
@@ -108,10 +108,8 @@ try:
 except FileNotFoundError:
     leds = None
 
-wubs = []
-wubs.append(sf.read('sounds/wub.wav'))
-wubs.append(sf.read('sounds/wub2.wav'))
-wubs.append(sf.read('sounds/wub3.wav'))
+midiout = rtmidi.MidiOut()
+midiout.open_port(5)
 
 #RRBBGG
 #          RRBBGG
@@ -121,17 +119,17 @@ GREEN  = 0x0000ff
 
 def display_event(event):
     print(event)
-    sound = wubs[0]
+    note = 60
     color = ORANGE
     if 'v13' in event[1]:
         color = GREEN
-        sound = wubs[1]
+        note = 62
     elif 'gift' in event[1]:
         color = BLUE
-        sound = wubs[2]
+        note = 64
     if leds:
         leds.advance(color)
-    sd.play(sound[0], sound[1], blocking=False)
+    midiout.send_message((NOTE_ON | 10, note, 127))
 
 event = None
 while True:
@@ -150,3 +148,5 @@ while True:
         if leds:
             leds.tick()
     time.sleep(0.001)
+
+del midiout
