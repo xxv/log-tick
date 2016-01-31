@@ -61,6 +61,14 @@ class LedPattern():
 events = queue.Queue()
 load_lock = threading.Event()
 
+# offset from realtime
+#load_offset     = datetime.timedelta(seconds = 5)
+load_window     = datetime.timedelta(seconds = 60)
+playback_offset = datetime.timedelta(days=4,hours=9,seconds = 65)
+
+def to_microseconds(atime):
+    return int(time.mktime(atime.timetuple()) * 1000 + atime.microsecond/1000)
+
 def load_events():
     last_load=None
     config = None
@@ -71,29 +79,27 @@ def load_events():
         load_lock.wait()
         print("Loading events...")
 
-        interval=60 * 1000
-        now=int(time.time() * 1000)
+        interval=int(load_window.total_seconds() * 1000)
+        end=to_microseconds(datetime.datetime.now() - playback_offset) + interval
         if last_load:
-            delay = max(0, (last_load + interval/2) - now)
+            delay = max(0, (last_load + interval/2) - end)
             if delay:
                 print("Reloading too fast. Waiting...")
             time.sleep(delay / 1000)
-            now=int(time.time() * 1000)
+            end=to_microseconds(datetime.datetime.now() - playback_offset) + interval
         else:
-            last_load = now - interval
-        logs = logentries.load_logs(last_load, now)
+            last_load = end - interval
+        print(last_load, end)
+        logs = logentries.load_logs(last_load, end)
         for event in sorted(logs, key=lambda event: event[0]):
             events.put(event)
         print("Loaded {:d} events.".format(len(logs)))
-        last_load = now
+        last_load = end
         load_lock.clear()
 
 t = threading.Thread(target=load_events)
 t.daemon=True
 t.start()
-
-# offset from realtime
-offset=datetime.timedelta(seconds=60 + 5)
 
 led_count=32
 fs=44100
@@ -137,7 +143,7 @@ while True:
             event = events.get(block=False)
         except queue.Empty:
             event = None
-    if event and (event[0] + offset) <= datetime.datetime.now(tz=pytz.utc):
+    if event and (event[0] + playback_offset) <= datetime.datetime.now(tz=pytz.utc):
         display_event(event)
         event = None
     else:
