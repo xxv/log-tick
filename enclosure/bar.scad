@@ -1,7 +1,7 @@
 leds=32;
 
 // The dimensions here are super fiddly
-pixel_size=[6.88, 6.88, 3.25];
+pixel_size=[6.9, 6.9, 3.25];
 pixel_wall=[1, 1, 0.20];
 strip=[10.5, pixel_size[1] * leds - pixel_wall[1], pixel_size[2] + pixel_wall[2]];
 housing=strip + [1, 1, 1];
