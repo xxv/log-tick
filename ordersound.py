@@ -8,6 +8,7 @@ import pytz
 import re
 import rtmidi
 from rtmidi.midiconstants import *
+from rtmidi.midiutil import open_midiport
 import time
 import threading
 import urllib.request
@@ -62,9 +63,8 @@ events = queue.Queue()
 load_lock = threading.Event()
 
 # offset from realtime
-#load_offset     = datetime.timedelta(seconds = 5)
 load_window     = datetime.timedelta(seconds = 60)
-playback_offset = datetime.timedelta(days=4,hours=9,seconds = 65)
+playback_offset = datetime.timedelta(seconds = 65)
 
 def to_microseconds(atime):
     return int(time.mktime(atime.timetuple()) * 1000 + atime.microsecond/1000)
@@ -109,7 +109,9 @@ except FileNotFoundError:
     leds = None
 
 midiout = rtmidi.MidiOut()
-midiout.open_port(5)
+
+port = sys.argv[1] if len(sys.argv) > 1 else None
+midiout, port_name = open_midiport(port, "output")
 
 #RRBBGG
 #          RRBBGG
@@ -119,12 +121,12 @@ GREEN  = 0x0000ff
 
 def display_event(event):
     print(event)
-    note = 60
+    note = 62
     color = ORANGE
     if 'v13' in event[1]:
         color = GREEN
-        note = 62
-    elif 'gift' in event[1]:
+        note = 60
+    elif 'gift' in event[1] or 'v15' in event[1]:
         color = BLUE
         note = 64
     if leds:
