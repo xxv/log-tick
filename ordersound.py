@@ -13,6 +13,7 @@ import time
 import threading
 import urllib.request
 import queue
+import sys
 from apa102 import APA102
 
 class LogEntries():
@@ -89,7 +90,6 @@ def load_events():
             end=to_microseconds(datetime.datetime.now() - playback_offset) + interval
         else:
             last_load = end - interval
-        print(last_load, end)
         logs = logentries.load_logs(last_load, end)
         for event in sorted(logs, key=lambda event: event[0]):
             events.put(event)
