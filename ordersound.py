@@ -3,8 +3,11 @@
 import collections
 import datetime
 import json
+import iso8601
+import pytz
 import re
 import sounddevice as sd
+import soundfile as sf
 import time
 import threading
 import urllib.request
@@ -28,7 +31,7 @@ class LogEntries():
         for line in body.split('\n'):
             m = re.match(r'.*?(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6}[-+]\d{2}:\d{2}).*path="([^"]+)".*', line)
             if m:
-                when=datetime.datetime.strptime(m.groups()[0], '%Y-%m-%dT%H:%M:%S.%f+00:00')
+                when=iso8601.parse_date(m.groups()[0])
                 events.append((when, m.groups()[1]))
 
         return events
@@ -94,13 +97,35 @@ offset=datetime.timedelta(seconds=60 + 5)
 
 led_count=32
 fs=44100
-leds=LedPattern(APA102(led_count), led_count, 32)
+try:
+    leds = LedPattern(APA102(led_count), led_count, 32)
+except FileNotFoundError:
+    leds = None
+
+wubs = []
+wubs.append(sf.read('sounds/wub.wav'))
+wubs.append(sf.read('sounds/wub2.wav'))
+wubs.append(sf.read('sounds/wub3.wav'))
 
 #RRBBGG
 #          RRBBGG
 ORANGE = 0xff007a
 BLUE   = 0x75b0ff
 GREEN  = 0x0000ff
+
+def display_event(event):
+    print(event)
+    sound = wubs[0]
+    color = ORANGE
+    if 'v13' in event[1]:
+        color = GREEN
+        sound = wubs[1]
+    elif 'gift' in event[1]:
+        color = BLUE
+        sound = wubs[2]
+    if leds:
+        leds.advance(color)
+    sd.play(sound[0], sound[1], blocking=False)
 
 event = None
 while True:
@@ -112,19 +137,10 @@ while True:
             event = events.get(block=False)
         except queue.Empty:
             event = None
-    if event and (event[0] + offset) <= datetime.datetime.now():
-        sd.play([[-1.0],[-1.0],[-1.0], [0.0]], fs, blocking=False)
-        print(event)
-        try:
-            event = events.get(block=False)
-            color=ORANGE
-            if 'v13' in event[1]:
-                color=GREEN
-            elif 'gift' in event[1]:
-                color=BLUE
-            leds.advance(color)
-        except queue.Empty:
-            event = None
+    if event and (event[0] + offset) <= datetime.datetime.now(tz=pytz.utc):
+        display_event(event)
+        event = None
     else:
-        leds.tick()
+        if leds:
+            leds.tick()
     time.sleep(0.001)
