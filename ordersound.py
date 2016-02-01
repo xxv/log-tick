@@ -81,7 +81,7 @@ def to_microseconds(atime):
 def load_events():
     last_load=None
     config = None
-    with open("config.json") as config_file:
+    with open("/etc/order-sound.json") as config_file:
         config=json.load(config_file)
     logentries = LogEntries(config['account_key'], config['log_set_name'], config['log_name'])
     while True:
