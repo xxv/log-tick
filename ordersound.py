@@ -7,7 +7,7 @@ import iso8601
 import pytz
 import re
 import rtmidi
-from rtmidi.midiconstants import *
+from rtmidi.midiconstants import NOTE_ON
 from rtmidi.midiutil import open_midiport
 import time
 import threading
@@ -71,15 +71,17 @@ class LedPattern():
 events = queue.Queue()
 load_lock = threading.Event()
 
-# offset from realtime
+# The window of time to load at once
 load_window     = datetime.timedelta(seconds = 60)
+
+# negative offset from realtime
 playback_offset = datetime.timedelta(seconds = 65)
 
 def to_microseconds(atime):
     return int(time.mktime(atime.timetuple()) * 1000 + atime.microsecond/1000)
 
 def load_events():
-    last_load=None
+    last_load = None
     config = None
     with open("/etc/order-sound.json") as config_file:
         config=json.load(config_file)
@@ -116,12 +118,9 @@ try:
 except FileNotFoundError:
     leds = None
 
-midiout = rtmidi.MidiOut()
-
 port = sys.argv[1] if len(sys.argv) > 1 else None
 midiout, port_name = open_midiport(port, "output")
 
-#RRBBGG
 #          RRBBGG
 ORANGE = 0xff007a
 BLUE   = 0x22ff55
@@ -141,9 +140,10 @@ def display_event(event):
         leds.advance(color)
     midiout.send_message((NOTE_ON | 10, note, 127))
 
-leds.set([ORANGE] * 10 + [0] + [GREEN] * 10 + [0] + [BLUE] * 10)
-time.sleep(2)
-leds.clear()
+if leds:
+    leds.set([ORANGE] * 10 + [0] + [GREEN] * 10 + [0] + [BLUE] * 10)
+    time.sleep(2)
+    leds.clear()
 
 event = None
 while True:
