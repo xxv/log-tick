@@ -46,6 +46,14 @@ class LedPattern():
         self.speed = speed
         self.counter = 0
 
+    def set(self, array_like):
+        for i, value in enumerate(array_like):
+            self.leds.setPixelRGB(i, value)
+        self.leds.show()
+
+    def clear(self):
+        self.leds.clearStrip()
+
     def tick(self):
         self.counter = (self.counter + 1) % self.speed
         if self.counter == 0:
@@ -104,7 +112,7 @@ t.start()
 led_count=32
 fs=44100
 try:
-    leds = LedPattern(APA102(led_count), led_count, 32)
+    leds = LedPattern(APA102(led_count, 8), led_count, 32)
 except FileNotFoundError:
     leds = None
 
@@ -116,7 +124,7 @@ midiout, port_name = open_midiport(port, "output")
 #RRBBGG
 #          RRBBGG
 ORANGE = 0xff007a
-BLUE   = 0x75b0ff
+BLUE   = 0x22ff55
 GREEN  = 0x0000ff
 
 def display_event(event):
@@ -132,6 +140,10 @@ def display_event(event):
     if leds:
         leds.advance(color)
     midiout.send_message((NOTE_ON | 10, note, 127))
+
+leds.set([ORANGE] * 10 + [0] + [GREEN] * 10 + [0] + [BLUE] * 10)
+time.sleep(2)
+leds.clear()
 
 event = None
 while True:
