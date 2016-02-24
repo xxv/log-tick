@@ -6,7 +6,6 @@ import json
 import iso8601
 import pytz
 import re
-import rtmidi
 from rtmidi.midiconstants import NOTE_ON
 from rtmidi.midiutil import open_midiport
 import time
@@ -15,6 +14,19 @@ import urllib.request
 import queue
 import sys
 from apa102 import APA102
+
+LED_COUNT = 32
+
+#          RRBBGG
+ORANGE = 0xff007a
+BLUE   = 0x22ff55
+GREEN  = 0x0000ff
+
+# The window of time to load at once
+load_window     = datetime.timedelta(seconds = 60)
+
+# negative offset from realtime
+playback_offset = datetime.timedelta(seconds = 65)
 
 class LogEntries():
     def __init__(self, account_key, log_set_name, log_name):
@@ -71,12 +83,6 @@ class LedPattern():
 events = queue.Queue()
 load_lock = threading.Event()
 
-# The window of time to load at once
-load_window     = datetime.timedelta(seconds = 60)
-
-# negative offset from realtime
-playback_offset = datetime.timedelta(seconds = 65)
-
 def to_microseconds(atime):
     return int(time.mktime(atime.timetuple()) * 1000 + atime.microsecond/1000)
 
@@ -111,22 +117,15 @@ t = threading.Thread(target=load_events)
 t.daemon=True
 t.start()
 
-led_count=32
-fs=44100
 try:
-    leds = LedPattern(APA102(led_count, 8), led_count, 32)
+    leds = LedPattern(APA102(LED_COUNT, 8), LED_COUNT, 32)
 except FileNotFoundError:
     leds = None
 
 port = sys.argv[1] if len(sys.argv) > 1 else None
 midiout, port_name = open_midiport(port, "output")
 
-#          RRBBGG
-ORANGE = 0xff007a
-BLUE   = 0x22ff55
-GREEN  = 0x0000ff
-
-def display_event(event):
+def display_event(midiout, event):
     print(event)
     note = 62
     color = ORANGE
@@ -156,7 +155,7 @@ while True:
         except queue.Empty:
             event = None
     if event and (event[0] + playback_offset) <= datetime.datetime.now(tz=pytz.utc):
-        display_event(event)
+        display_event(midiout, event)
         event = None
     else:
         if leds:
