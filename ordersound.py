@@ -106,12 +106,17 @@ def load_events():
             end=to_microseconds(datetime.datetime.now() - playback_offset) + interval
         else:
             last_load = end - interval
-        logs = logentries.load_logs(last_load, end)
-        for event in sorted(logs, key=lambda event: event[0]):
-            events.put(event)
-        print("Loaded {:d} events.".format(len(logs)))
-        last_load = end
-        load_lock.clear()
+        try:
+            logs = logentries.load_logs(last_load, end)
+            for event in sorted(logs, key=lambda event: event[0]):
+                events.put(event)
+            print("Loaded {:d} events.".format(len(logs)))
+            last_load = end
+            load_lock.clear()
+        except urllib.error.HTTPError as e:
+            if e.getcode() == 403: # ruh-ro! We may be polling too often.
+                print("We've been throttled. Waiting a minute and trying again...")
+                time.sleep(60)
 
 t = threading.Thread(target=load_events)
 t.daemon=True
