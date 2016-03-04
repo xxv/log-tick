@@ -35,7 +35,7 @@ class LogEntries():
         self.log_name = log_name
 
     def get_url(self, start, end):
-        log_filter='/router.*POST.*orders\".*status=200/'
+        log_filter='/router.*POST.*orders.*status=200/'
         return "https://pull.logentries.com/{:s}/hosts/{:s}/{:s}/?start={:d}&end={:d}&filter={:s}".format(self.account_key, self.log_set_name, self.log_name, start, end, log_filter)
 
     def load_logs(self, start, end):
