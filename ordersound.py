@@ -16,15 +16,15 @@ import sys
 from apa102 import APA102
 
 LED_COUNT = 32
-LED_GLOBAL_BRIGHTNESS = 8
+LED_GLOBAL_BRIGHTNESS = 31
 LED_SPEED = 32
 
 MIN_BUFFER_SIZE = 10
 
 #          RRBBGG
-ORANGE = 0xff007a
-BLUE   = 0x22ff55
-GREEN  = 0x0000ff
+ORANGE = 0x4d0025
+BLUE   = 0x0a4d1a
+GREEN  = 0x00004d
 
 # The window of time to load at once
 load_window     = datetime.timedelta(seconds = 60)
