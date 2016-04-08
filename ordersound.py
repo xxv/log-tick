@@ -16,6 +16,10 @@ import sys
 from apa102 import APA102
 
 LED_COUNT = 32
+LED_GLOBAL_BRIGHTNESS = 8
+LED_SPEED = 32
+
+MIN_BUFFER_SIZE = 10
 
 #          RRBBGG
 ORANGE = 0xff007a
@@ -123,7 +127,7 @@ t.daemon=True
 t.start()
 
 try:
-    leds = LedPattern(APA102(LED_COUNT, 8), LED_COUNT, 32)
+    leds = LedPattern(APA102(LED_COUNT, LED_GLOBAL_BRIGHTNESS), LED_COUNT, LED_SPEED)
 except FileNotFoundError:
     leds = None
 
@@ -152,7 +156,7 @@ if leds:
 event = None
 while True:
     # if the buffer is low, fill it up
-    if events.qsize() < 5 and not load_lock.is_set():
+    if events.qsize() < MIN_BUFFER_SIZE and not load_lock.is_set():
         load_lock.set()
     if not event:
         try:
