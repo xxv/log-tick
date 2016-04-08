@@ -43,7 +43,11 @@ class LogEntries():
         return "https://pull.logentries.com/{:s}/hosts/{:s}/{:s}/?start={:d}&end={:d}&filter={:s}".format(self.account_key, self.log_set_name, self.log_name, start, end, log_filter)
 
     def load_logs(self, start, end):
-        r=urllib.request.urlopen(self.get_url(start, end))
+        try:
+            r=urllib.request.urlopen(self.get_url(start, end))
+        except urllib.error.URLError as e:
+            print("Error reading from network: %s" % e)
+            return []
         body=r.read().decode('utf-8')
         events=[]
         for line in body.split('\n'):
