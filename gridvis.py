@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import collections
 import datetime
 import json
 import iso8601
@@ -11,7 +10,6 @@ import threading
 import random
 import urllib.request
 import queue
-import sys
 from apa102 import APA102
 from zigzag_screen import ZigzagLedScreen
 
@@ -20,11 +18,6 @@ LED_GLOBAL_BRIGHTNESS = 31
 LED_SPEED = 16
 
 MIN_BUFFER_SIZE = 10
-
-#          RRBBGG
-#ORANGE = 0x4d0025
-#BLUE   = 0x0a4d1a
-#GREEN  = 0x00004d
 
 ORANGE = 0xff7a00
 BLUE   = 0x2255ff
