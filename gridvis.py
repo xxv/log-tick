@@ -96,8 +96,9 @@ class LedPattern():
     def add(self, value):
         if len(self.points) >= self.screen.width * self.screen.height:
             # filled. Just set it to be the position of the one that happened longest ago
-            self.points[0][1] = value
-            self.points[0][2] = 100
+            coord = self.points[0][0]
+            del(self.points[0])
+            self.points.append([coord, value, 100])
         else:
             while True:
                 x = random.randint(0, self.screen.width)
