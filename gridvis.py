@@ -84,13 +84,28 @@ class LedPattern():
         self.counter = (self.counter + 1) % self.speed
         if self.counter == 0:
             self.advance(0)
-    def add(self, value):
-        if len(self.points) == self.screen.width * self.screen.height:
-            # filled. Just set it to be the position of the one that happened most recently
 
-        x = random.randint(0, self.screen.width)
-        y = random.randint(0, self.screen.height)
-        self.points.append([(x, y), value, 100])
+    def has_point(self, coord):
+        if len(self.points) >= self.screen.width * self.screen.height:
+            return True
+        for point in self.points:
+            if coord == point[0]:
+                return True
+        return False
+
+    def add(self, value):
+        if len(self.points) >= self.screen.width * self.screen.height:
+            # filled. Just set it to be the position of the one that happened longest ago
+            self.points[0][1] = value
+            self.points[0][2] = 100
+        else:
+            while True:
+                x = random.randint(0, self.screen.width)
+                y = random.randint(0, self.screen.height)
+                coord = (x, y)
+                if not self.has_point(coord):
+                    break
+            self.points.append([coord, value, 100])
 
     def advance(self, value):
         for point in self.points:
