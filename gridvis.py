@@ -11,7 +11,7 @@ import random
 import urllib.request
 import queue
 from apa102 import APA102
-from zigzag_screen import ZigzagLedScreen
+from zigzag import ZigzagLedScreen
 
 LED_COUNT = 32
 LED_GLOBAL_BRIGHTNESS = 31
@@ -116,6 +116,10 @@ class LedPattern():
 
     def test(self):
         self.screen.clear()
+        #self.screen.setPixel((0, 0), 0xff0000)
+        #self.screen.setPixel((1, 0), 0x00ff00)
+        #self.screen.setPixel((2, 0), 0x0000ff)
+
         self.screen.setPixel((4, 3), ORANGE)
         self.screen.setPixel((4, 4), BLUE)
         self.screen.setPixel((3, 4), GREEN)
