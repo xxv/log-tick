@@ -145,7 +145,7 @@ class Visualizer():
                     time.sleep(60)
 
     def display_event(self, event):
-        print(event)
+        print("{} {}".format(event[0].isoformat(), event[1]))
         color = ORANGE
         if 'v13' in event[1]:
             color = GREEN
