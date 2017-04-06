@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
+"""LevelUp transaction visualizer"""
+
 import datetime
-import json
-import iso8601
-import pytz
-import re
 import time
 import threading
 import random
 import urllib.request
 import queue
+import json
+import pytz
 from apa102 import APA102
-from zigzag import ZigzagLedScreen
+from logentries import LogEntries
+from screen import ZigzagLedScreen
 
 LED_COUNT = 32
 LED_GLOBAL_BRIGHTNESS = 31
@@ -20,40 +21,16 @@ LED_SPEED = 16
 MIN_BUFFER_SIZE = 10
 
 ORANGE = 0xff7a00
-BLUE   = 0x2255ff
-GREEN  = 0x00ff00
+BLUE = 0x2255ff
+GREEN = 0x00ff00
 
 # The window of time to load at once
-load_window     = datetime.timedelta(seconds = 60)
+LOAD_WINDOW = datetime.timedelta(seconds=60)
 
 # negative offset from realtime
-playback_offset = datetime.timedelta(seconds = 65)
+PLAYBACK_OFFSET = datetime.timedelta(seconds=65)
 
-class LogEntries():
-    def __init__(self, account_key, log_set_name, log_name):
-        self.account_key = account_key
-        self.log_set_name = log_set_name
-        self.log_name = log_name
-
-    def get_url(self, start, end):
-        log_filter='/router.*POST.*orders.*status=200/'
-        return "https://pull.logentries.com/{:s}/hosts/{:s}/{:s}/?start={:d}&end={:d}&filter={:s}".format(self.account_key, self.log_set_name, self.log_name, start, end, log_filter)
-
-    def load_logs(self, start, end):
-        try:
-            r=urllib.request.urlopen(self.get_url(start, end))
-        except urllib.error.URLError as e:
-            print("Error reading from network: %s" % e)
-            return []
-        body=r.read().decode('utf-8')
-        events=[]
-        for line in body.split('\n'):
-            m = re.match(r'.*?(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6}[-+]\d{2}:\d{2}).*path="([^"]+)".*', line)
-            if m:
-                when=iso8601.parse_date(m.groups()[0])
-                events.append((when, m.groups()[1]))
-
-        return events
+LOG_FILTER = '/router.*POST.*orders.*status=200/'
 
 def fade_color(color, amount):
     color2 = (max(0, int((color >> 16) * amount))) << 16
@@ -63,10 +40,10 @@ def fade_color(color, amount):
     return color2
 
 class LedPattern():
-    screen=None
-    points=[]
-    def __init__(self, leds, count, speed):
-        self.screen = ZigzagLedScreen(leds, 5, 5, 1)
+    screen = None
+    points = []
+    def __init__(self, screen, speed):
+        self.screen = screen
         self.speed = speed
         self.counter = 0
 
@@ -90,7 +67,7 @@ class LedPattern():
         if len(self.points) >= self.screen.width * self.screen.height:
             # filled. Just set it to be the position of the one that happened longest ago
             coord = self.points[0][0]
-            del(self.points[0])
+            del self.points[0]
             self.points.append([coord, value, 100])
         else:
             while True:
@@ -109,100 +86,107 @@ class LedPattern():
 
     def show(self):
         self.screen.clear()
-        for i, point in enumerate(self.points[:]):
+        for point in self.points[:]:
             color = fade_color(point[1], (point[2])/100.0)
             self.screen.setPixel(point[0], color)
         self.screen.show()
 
     def test(self):
         self.screen.clear()
-        #self.screen.setPixel((0, 0), 0xff0000)
-        #self.screen.setPixel((1, 0), 0x00ff00)
-        #self.screen.setPixel((2, 0), 0x0000ff)
-
         self.screen.setPixel((4, 3), ORANGE)
         self.screen.setPixel((4, 4), BLUE)
         self.screen.setPixel((3, 4), GREEN)
         self.screen.show()
 
-events = queue.Queue()
-load_lock = threading.Event()
+class Visualizer():
+    events_queue = queue.Queue()
+    load_lock = threading.Event()
+    event = None
 
-def to_microseconds(atime):
-    return int(time.mktime(atime.timetuple()) * 1000 + atime.microsecond/1000)
+    def __init__(self, screen):
+        try:
+            self.leds = LedPattern(screen, LED_SPEED)
+        except FileNotFoundError:
+            self.leds = None
 
-def load_events():
-    last_load = None
-    config = None
-    with open("/etc/order-sound.json") as config_file:
-        config=json.load(config_file)
-    logentries = LogEntries(config['account_key'], config['log_set_name'], config['log_name'])
-    while True:
-        load_lock.wait()
-        print("Loading events...")
+    def to_microseconds(self, atime):
+        return int(time.mktime(atime.timetuple()) * 1000 + atime.microsecond/1000)
 
-        interval=int(load_window.total_seconds() * 1000)
-        end=to_microseconds(datetime.datetime.now() - playback_offset) + interval
-        if last_load:
-            delay = max(0, (last_load + interval/2) - end)
-            if delay:
-                print("Reloading too fast. Waiting...")
-            time.sleep(delay / 1000)
-            end=to_microseconds(datetime.datetime.now() - playback_offset) + interval
+    def load_events(self):
+        last_load = None
+        config = None
+        with open("/etc/order-sound.json") as config_file:
+            config = json.load(config_file)
+        logentries = LogEntries(config['account_key'], config['log_set_name'], config['log_name'])
+        while True:
+            self.load_lock.wait()
+            print("Loading events...")
+
+            interval = int(LOAD_WINDOW.total_seconds() * 1000)
+            end = self.to_microseconds(datetime.datetime.now() - PLAYBACK_OFFSET) + interval
+            if last_load:
+                delay = max(0, (last_load + interval/2) - end)
+                if delay:
+                    print("Reloading too fast. Waiting...")
+                time.sleep(delay / 1000)
+                end = self.to_microseconds(datetime.datetime.now() - PLAYBACK_OFFSET) + interval
+            else:
+                last_load = end - interval
+            try:
+                logs = logentries.load_logs(last_load, end, LOG_FILTER)
+                for event in sorted(logs, key=lambda event: event[0]):
+                    self.events_queue.put(event)
+                print("Loaded {:d} events.".format(len(logs)))
+                last_load = end
+                self.load_lock.clear()
+            except urllib.error.HTTPError as err:
+                if err.getcode() == 403: # ruh-ro! We may be polling too often.
+                    print("We've been throttled. Waiting a minute and trying again...")
+                    time.sleep(60)
+
+    def display_event(self, event):
+        print(event)
+        color = ORANGE
+        if 'v13' in event[1]:
+            color = GREEN
+        elif 'gift' in event[1] or 'v15' in event[1]:
+            color = BLUE
+        if self.leds:
+            self.leds.add(color)
+
+    def start(self):
+        thread = threading.Thread(target=self.load_events)
+        thread.daemon = True
+        thread.start()
+
+    def test_leds(self):
+        if self.leds:
+            self.leds.test()
+            time.sleep(2)
+            self.leds.clear()
+
+    def tick(self):
+        # if the buffer is low, fill it up
+        if self.events_queue.qsize() < MIN_BUFFER_SIZE and not self.load_lock.is_set():
+            self.load_lock.set()
+        if not self.event:
+            try:
+                self.event = self.events_queue.get(block=False)
+            except queue.Empty:
+                self.event = None
+        if self.event and (self.event[0] + PLAYBACK_OFFSET) <= datetime.datetime.now(tz=pytz.utc):
+            self.display_event(self.event)
+            self.event = None
         else:
-            last_load = end - interval
-        try:
-            logs = logentries.load_logs(last_load, end)
-            for event in sorted(logs, key=lambda event: event[0]):
-                events.put(event)
-            print("Loaded {:d} events.".format(len(logs)))
-            last_load = end
-            load_lock.clear()
-        except urllib.error.HTTPError as e:
-            if e.getcode() == 403: # ruh-ro! We may be polling too often.
-                print("We've been throttled. Waiting a minute and trying again...")
-                time.sleep(60)
+            if self.leds:
+                self.leds.tick()
 
-t = threading.Thread(target=load_events)
-t.daemon=True
-t.start()
+def main():
+    visualizer = Visualizer(ZigzagLedScreen(APA102(LED_COUNT, LED_GLOBAL_BRIGHTNESS), 5, 5, 1))
+    visualizer.start()
+    while True:
+        visualizer.tick()
+        time.sleep(0.001)
 
-try:
-    leds = LedPattern(APA102(LED_COUNT, LED_GLOBAL_BRIGHTNESS), LED_COUNT, LED_SPEED)
-except FileNotFoundError:
-    leds = None
-
-def display_event(event):
-    print(event)
-    color = ORANGE
-    if 'v13' in event[1]:
-        color = GREEN
-    elif 'gift' in event[1] or 'v15' in event[1]:
-        color = BLUE
-    if leds:
-        leds.add(color)
-
-
-if leds:
-    leds.test()
-    time.sleep(2)
-    leds.clear()
-
-event = None
-while True:
-    # if the buffer is low, fill it up
-    if events.qsize() < MIN_BUFFER_SIZE and not load_lock.is_set():
-        load_lock.set()
-    if not event:
-        try:
-            event = events.get(block=False)
-        except queue.Empty:
-            event = None
-    if event and (event[0] + playback_offset) <= datetime.datetime.now(tz=pytz.utc):
-        display_event(event)
-        event = None
-    else:
-        if leds:
-            leds.tick()
-    time.sleep(0.001)
-
+if __name__ == "__main__":
+    main()
