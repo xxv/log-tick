@@ -1,4 +1,5 @@
 iso8601==0.1.11
+paho-mqtt==1.2.3
 pycparser==2.14
 python-rtmidi==0.5b1
 pytz==2015.7

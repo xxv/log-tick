@@ -17,6 +17,9 @@ class LogEntries():
                 "{:s}/hosts/{:s}/{:s}/?start={:d}&end={:d}&filter={:s}".format(
                     self.account_key, self.log_set_name, self.log_name, start, end, log_filter))
 
+    def filter_path(self, path):
+        return re.sub(r'\?.+', '', path)
+
     def load_logs(self, start, end, log_filter):
         try:
             response = urllib.request.urlopen(self.get_url(start, end, log_filter))
@@ -29,8 +32,9 @@ class LogEntries():
             match = re.match(r'.*?(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
                              r'.\d{6}[-+]\d{2}:\d{2}).*path="([^"]+)".*', line)
             if match:
+                path = self.filter_path(match.groups()[1])
                 when = iso8601.parse_date(match.groups()[0])
-                events.append((when, match.groups()[1]))
+                events.append((when, path))
 
         return events
 

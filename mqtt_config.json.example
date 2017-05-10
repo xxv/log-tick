@@ -1,0 +1,7 @@
+{
+  "host": "mqtt.example.org",
+  "port": 1883,
+  "user":"username",
+  "password": "hunter2",
+  "ca_certs": "/my/path/to/pems/if/ssl/is/desired/certs.pem"
+}
