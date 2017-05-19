@@ -1,13 +1,20 @@
 import json
-from vis import EventSource
+from eventplayback import EventSource
 from mqtt_base import MQTTBase
 
 class MQTTSource(MQTTBase, EventSource):
+    listener = None
     topic = 'levelup/visualization/order'
+
     def __init__(self, config_file):
         MQTTBase.__init__(self, config_file=config_file)
+
     def events(self):
         return []
+
+    def set_listener(self, listener):
+        self.listener = listener
+
     def on_connect(self, client, userdata, flags, conn_result):
         self.mqtt.subscribe(self.topic)
         print("Connected to MQTT server.")
@@ -17,4 +24,5 @@ class MQTTSource(MQTTBase, EventSource):
             self.on_order(json.loads(message.payload.decode('utf-8')))
 
     def on_order(self, body):
-        print("order: {}".format(body))
+        if self.listener:
+            self.listener.show_event(body)
