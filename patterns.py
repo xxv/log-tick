@@ -14,26 +14,22 @@ def fade_color(color, amount):
     return color2
 
 class Pattern(object):
-    def clear(self):
-        pass
+    """A visualization pattern"""
     def tick(self):
+        """Call this on a regular basis to update any animation state"""
         pass
     def show_event(self, event):
-        pass
-    def test(self):
+        """Call this to add a new event to the visualization"""
         pass
 
 class DebugPattern(Pattern):
-    def clear(self):
-        print("Clear")
+    """A handy pattern that just prints out events"""
     def tick(self):
         pass
     def show_event(self, event):
         print("Event: {}".format(event))
-    def test(self):
-        print("Test")
 
-class ColorFadePattern(object):
+class ColorFadePattern(Pattern):
     """Displays fading colors on a screen"""
     screen = None
     points = []
@@ -48,7 +44,7 @@ class ColorFadePattern(object):
     def tick(self):
         self.counter = (self.counter + 1) % self.speed
         if self.counter == 0:
-            self.advance(0)
+            self.advance()
 
     def has_point(self, coord):
         if len(self.points) >= self.screen.width * self.screen.height:
@@ -83,7 +79,7 @@ class ColorFadePattern(object):
                     break
             self.points.append([coord, value, 100])
 
-    def advance(self, value):
+    def advance(self):
         for point in self.points:
             point[2] -= 1
         self.points[:] = [l for l in self.points if l[2] > 0]
