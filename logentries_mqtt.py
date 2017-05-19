@@ -10,6 +10,8 @@ from eventplayback import EventPlayback, PlaybackTarget
 from logentries_source import LogEntriesSource
 
 class MQTTTarget(MQTTBase, PlaybackTarget):
+    topic = 'levelup/visualization/order'
+
     def __init__(self, config_file):
         MQTTBase.__init__(self, config_file=config_file)
 
@@ -17,12 +19,12 @@ class MQTTTarget(MQTTBase, PlaybackTarget):
         print("Connected to MQTT server.")
 
     def on_event(self, event):
-        self.mqtt.publish('levelup/visualization/order', json.dumps({"time": event[0].isoformat(), "path": event[1]}))
+        self.mqtt.publish(self.topic, json.dumps({"time": event[0].isoformat(), "path": event[1]}))
 
 def main():
     target = MQTTTarget(sys.argv[1])
     target.connect()
-    mqtt_thread = Thread(target=target.loop)
+    mqtt_thread = Thread(target=target.loop_forever)
     mqtt_thread.start()
     source = LogEntriesSource(sys.argv[2])
     event_playback = EventPlayback(target, source)
