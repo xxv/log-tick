@@ -21,7 +21,7 @@ class Screen:
 class ZigzagLedScreen(Screen):
     """A screen that maps a is made using a zig-zag LED strip"""
     def __init__(self, leds, width, height, initial_offset=0):
-        super(ZigzagLedScreen).__init__(width, height)
+        Screen.__init__(self, width, height)
         self.leds = leds
         self.initial_offset = initial_offset
 

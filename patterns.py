@@ -93,12 +93,12 @@ class ColorFadePattern(object):
         self.screen.clear()
         for point in self.points[:]:
             color = fade_color(point[1], (point[2])/100.0)
-            self.screen.setPixel(point[0], color)
+            self.screen.set_pixel(point[0], color)
         self.screen.show()
 
     def test(self):
         self.screen.clear()
-        self.screen.setPixel((4, 3), ORANGE)
-        self.screen.setPixel((4, 4), BLUE)
-        self.screen.setPixel((3, 4), GREEN)
+        self.screen.set_pixel((4, 3), ORANGE)
+        self.screen.set_pixel((4, 4), BLUE)
+        self.screen.set_pixel((3, 4), GREEN)
         self.screen.show()

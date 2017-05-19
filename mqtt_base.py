@@ -26,7 +26,7 @@ class MQTTBase():
             self.mqtt.username_pw_set(self.mqtt_config['user'], self.mqtt_config['password'])
         self.mqtt.connect(self.mqtt_config['host'], self.mqtt_config['port'])
 
-    def loop(self):
+    def loop_forever(self):
         self.mqtt.loop_forever()
 
     def on_connect(self, client, userdata, flags, conn_result):

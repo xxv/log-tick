@@ -25,4 +25,4 @@ class MQTTSource(MQTTBase, EventSource):
 
     def on_order(self, body):
         if self.listener:
-            self.listener.show_event(body)
+            self.listener(body)
