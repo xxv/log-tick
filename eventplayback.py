@@ -6,17 +6,20 @@ import threading
 import queue
 import pytz
 
-MIN_BUFFER_SIZE = 10
+MIN_BUFFER_SIZE = 40
 
 # The window of time to load at once
 LOAD_WINDOW = datetime.timedelta(seconds=60)
 
 # negative offset from realtime
-PLAYBACK_OFFSET = datetime.timedelta(seconds=65)
+PLAYBACK_OFFSET = datetime.timedelta(seconds=165)
 
 class EventSource(object):
     def events(self, start, end):
         """Return a list of events"""
+        pass
+    def get_date(self, event):
+        """Gets the date for the given event"""
         pass
 
 class PlaybackTarget(object):
@@ -31,6 +34,7 @@ class EventPlayback(object):
     events_queue = queue.Queue()
     load_lock = threading.Event()
     event = None
+    offset_event_time = None
 
     def __init__(self, target, event_source):
         self.target = target
@@ -74,8 +78,10 @@ class EventPlayback(object):
         if not self.event:
             try:
                 self.event = self.events_queue.get(block=False)
+                self.offset_event_time = self.event_source.get_date(self.event) + PLAYBACK_OFFSET
             except queue.Empty:
                 self.event = None
-        if self.event and (self.event[0] + PLAYBACK_OFFSET) <= datetime.datetime.now(tz=pytz.utc):
+        if self.event and self.offset_event_time <= datetime.datetime.now(tz=pytz.utc):
+            print('.', end='', flush=True)
             self.target.on_event(self.event)
             self.event = None
