@@ -6,14 +6,6 @@ import threading
 import queue
 import pytz
 
-MIN_BUFFER_SIZE = 40
-
-# The window of time to load at once
-LOAD_WINDOW = datetime.timedelta(seconds=60)
-
-# negative offset from realtime
-PLAYBACK_OFFSET = datetime.timedelta(seconds=165)
-
 class EventSource(object):
     def events(self, start, end):
         """Return a list of events"""
@@ -36,9 +28,16 @@ class EventPlayback(object):
     event = None
     offset_event_time = None
 
-    def __init__(self, target, event_source):
+    def __init__(self, target, event_source, load_window, playback_offset, min_buffer_size=40):
+        """
+        load_window in seconds
+        playback_offset in seconds
+        """
         self.target = target
         self.event_source = event_source
+        self.load_window = datetime.timedelta(seconds=load_window)
+        self.playback_offset = datetime.timedelta(seconds=playback_offset)
+        self.min_buffer_size = min_buffer_size
 
     def to_microseconds(self, atime):
         return int(time.mktime(atime.timetuple()) * 1000 + atime.microsecond/1000)
@@ -49,14 +48,14 @@ class EventPlayback(object):
             self.load_lock.wait()
             print("Loading events...")
 
-            interval = int(LOAD_WINDOW.total_seconds() * 1000)
-            end = self.to_microseconds(datetime.datetime.now() - PLAYBACK_OFFSET) + interval
+            interval = int(self.load_window.total_seconds() * 1000)
+            end = self.to_microseconds(datetime.datetime.now() - self.playback_offset) + interval
             if last_load:
                 delay = max(0, (last_load + interval/2) - end)
                 if delay:
                     print("Reloading too fast. Waiting...")
                 time.sleep(delay / 1000)
-                end = self.to_microseconds(datetime.datetime.now() - PLAYBACK_OFFSET) + interval
+                end = self.to_microseconds(datetime.datetime.now() - self.playback_offset) + interval
             else:
                 last_load = end - interval
             events = self.event_source.events(last_load, end)
@@ -73,12 +72,12 @@ class EventPlayback(object):
 
     def tick(self):
         # if the buffer is low, fill it up
-        if self.events_queue.qsize() < MIN_BUFFER_SIZE and not self.load_lock.is_set():
+        if self.events_queue.qsize() < self.min_buffer_size and not self.load_lock.is_set():
             self.load_lock.set()
         if not self.event:
             try:
                 self.event = self.events_queue.get(block=False)
-                self.offset_event_time = self.event_source.get_date(self.event) + PLAYBACK_OFFSET
+                self.offset_event_time = self.event_source.get_date(self.event) + self.playback_offset
             except queue.Empty:
                 self.event = None
         if self.event and self.offset_event_time <= datetime.datetime.now(tz=pytz.utc):
