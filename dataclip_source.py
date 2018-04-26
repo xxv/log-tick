@@ -43,8 +43,7 @@ class DataClipSource(EventSource):
 
             return events
 
-        except urllib.error.HTTPError as err:
-            if err.getcode() == 403: # ruh-ro! We may be polling too often.
-                print("We've been throttled. Waiting a minute and trying again...")
-                time.sleep(60)
+        except requests.RequestException as err:
+            print("Got an error polling the dataclip. Waiting a minute and retrying...")
+            time.sleep(60)
         return []

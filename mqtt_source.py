@@ -21,7 +21,10 @@ class MQTTSource(MQTTBase, EventSource):
 
     def on_message(self, client, userdata, message):
         if self.topic == message.topic:
-            self.on_order(json.loads(message.payload.decode('utf-8')))
+            try:
+                self.on_order(json.loads(message.payload.decode('utf-8')))
+            except ValueError as err:
+                print("Ignoring message that could not be decoded: {}".format(message.payload.decode('utf-8')))
 
     def on_order(self, body):
         if self.listener:
