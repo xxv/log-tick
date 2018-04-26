@@ -55,11 +55,11 @@ class ColorFadePattern(Pattern):
         return False
 
     def show_event(self, event):
-        color = ORANGE
-        if 'v13' in event['path']:
+        color = BLUE
+        if 'ready_time' in event and event['ready_time']:
+            color = ORANGE
+        elif 'app_id' in event and event['app_id'] == "295":
             color = GREEN
-        elif 'order_ahead' in event['path'] or 'gift' in event['path'] or 'v15' in event['path']:
-            color = BLUE
 
         self.add_color(color)
 
